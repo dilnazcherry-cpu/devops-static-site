@@ -1,0 +1,58 @@
+
+name: Static Website CI-CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v4
+
+      - name: Check website files
+        run: |
+          test -f index.html
+          test -f style.css
+          test -f script.js
+          echo "All website files are present"
+
+      - name: Package website
+        run: zip static-site.zip index.html style.css script.js
+
+      - name: Save ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-site
+          path: static-site.zip
+
+  deploy:
+    needs: build-test
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v4
+
+      - name: Prepare Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepare website artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
